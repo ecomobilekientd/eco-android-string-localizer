@@ -1,9 +1,10 @@
 # Android String Localizer
 
-A model-agnostic agent framework for localizing an **Android Kotlin/Compose** app's
-user-facing strings from inside its repository. The agent reads the Compose UI to translate by
-**intent and tone** — not word-by-word — while respecting the real layout limits, font
-coverage, and on-screen context it finds in the code.
+A model-agnostic agent framework for localizing an **Android** app's user-facing strings from
+inside its repository — whether the UI is **Compose** or the **View/XML layout** system. The
+agent reads the UI code to translate by **intent and tone** — not word-by-word — while staying
+aware of where each string renders. Translation owns the *words*; a companion `/check-fit`
+workflow owns the *layout fit* (an explicit separation a real dev will hold you to).
 
 Built for [Google Antigravity](https://antigravity.google) (`.agents/` rules · skills ·
 workflows), so it composes with the agent automatically instead of being one giant prompt.
@@ -12,14 +13,14 @@ workflows), so it composes with the agent automatically instead of being one gia
 
 - **Fidelity first.** Preserves the designer's exact meaning, intent, and scope. The only lever
   it touches is tone/register/word energy — never the content, the CTA's action, or the claim.
-- **Reads the code, not just the strings.** Traces each `R.string.<key>` to its `Text`, derives
-  the layout budget (HARD/SOFT/FLEXIBLE), `maxLines`, autosize, width/weight, and config
-  variants — then localizes for the tightest render site.
+- **Reads the code, not just the strings.** Traces each key to its render site (Compose `Text`
+  or `TextView`/XML) to confirm its function and on-screen context, then localizes accordingly.
 - **Catches what breaks builds.** Positional format args (`%1$s` not bare `%s`), XML escaping,
-  per-language plural forms, `translatable="false"`, CDATA, correct `values-<bcp47>` folders.
-- **Catches what breaks layout silently.** Font fallback for CJK/KR/Thai when the app font
-  lacks glyphs (metrics shift width *and* line-height), and a register guard that escalates a
-  cramped HARD element to a design decision rather than accepting a fitting-but-wrong word.
+  per-language plural forms, `translatable="false"`, source markup/CDATA preserved as-is,
+  dev's structural comments kept, correct `values-<bcp47>` folders.
+- **Separates translation from fit.** It translates faithfully and *flags* overflow risks; the
+  `/check-fit` workflow resolves them at the view layer (autosize, wider container, font
+  fallback for CJK/KR/Thai/AR) — never by mangling the translation.
 - **Safe by default.** Scope-aware (only the new/changed keys in partial runs), diff-and-confirm
   before any write, notes/flags to chat or the PR — never into `strings.xml`.
 
@@ -31,9 +32,10 @@ context rot:
 
 | File | Type | Loads when | Owns |
 |---|---|---|---|
-| [`.agents/rules/android-xml.md`](.agents/rules/android-xml.md) | Rule (`glob: **/strings.xml`) | a `strings.xml` is in context | Mechanical XML correctness — escaping, positional args, plurals syntax, locale folders. Small on purpose. |
-| [`.agents/skills/android-string-translator/SKILL.md`](.agents/skills/android-string-translator/SKILL.md) | Skill (agent-triggered) | the agent detects a localization task | The expertise — fidelity, voice card, reading Compose for constraints, classification, overflow & font-fallback protocol, glossary. |
-| [`.agents/workflows/localize-app.md`](.agents/workflows/localize-app.md) | Workflow (`/localize-app`) | the dev types `/localize-app` | The ordered procedure with confirm-gates and the git/grep commands. |
+| [`.agents/rules/android-xml.md`](.agents/rules/android-xml.md) | Rule (`glob: **/strings.xml`) | a `strings.xml` is in context | Mechanical XML correctness — escaping, positional args, plurals syntax, locale folders, markup/CDATA, comments. Small on purpose. |
+| [`.agents/skills/android-string-translator/SKILL.md`](.agents/skills/android-string-translator/SKILL.md) | Skill (agent-triggered) | the agent detects a localization task | The expertise — fidelity, voice card, reading Compose **or View/XML** for context, classification, glossary. Translates + flags; defers fit. |
+| [`.agents/workflows/localize-app.md`](.agents/workflows/localize-app.md) | Workflow (`/localize-app`) | the dev types `/localize-app` | The ordered translate procedure with confirm-gates and the git/grep commands. |
+| [`.agents/workflows/check-fit.md`](.agents/workflows/check-fit.md) | Workflow (`/check-fit`) | the dev types `/check-fit` (or `/localize-app` flags tight strings) | The overflow & layout-fit protocol for Compose + View/XML — budget, font fallback, view-layer fixes; shortening only as a dev-approved last resort. |
 
 ## Install
 
@@ -57,8 +59,9 @@ gated run type:
 /localize-app
 ```
 
-It will resolve scope, confirm the voice card, read the Compose constraints, translate by
-intent, then show a diff and wait for your confirmation before writing.
+It will resolve scope, confirm the voice card, read the render-site context (Compose or
+View/XML), translate by intent, then show a diff and wait for your confirmation before writing.
+For overflow-risky strings it flags, run `/check-fit` to get view-layer fix recommendations.
 
 ## Source
 

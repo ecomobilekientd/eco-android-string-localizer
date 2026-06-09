@@ -1,5 +1,5 @@
 ---
-description: Localize Android Kotlin/Compose strings into a target language from inside the repo. Runs scope → voice → code-read → translate → diff → write, with confirm-gates, preserving the designer's intent and the real layout limits read from Compose. Use when asked to "localize the app", "translate the strings", "dịch string", add a language, or populate values-xx/strings.xml.
+description: Localize Android strings (Compose or View/XML) into a target language from inside the repo. Runs scope → voice → code-read → translate → diff → write, with confirm-gates, preserving the designer's intent; flags overflow-risky keys for /check-fit rather than fitting them here. Use when asked to "localize the app", "translate the strings", "dịch string", add a language, or populate values-xx/strings.xml.
 ---
 
 # /localize-app
@@ -40,29 +40,34 @@ dev-supplied card is used verbatim. The locked card is the personality ceiling f
 Run **Stage 1** of the skill with read economy — narrow, not repo-wide:
 
 ```
+# Compose
 grep -rn "R.string.<key>\|stringResource(R.string.<key>" app/src
+# View/XML
+grep -rn "@string/<key>" app/src/main/res/layout*   ;   grep -rn "getString(R.string.<key>" app/src
 ```
 
-For each in-scope key: open only the render-site composable grep returns, read ~20 lines around
-the `Text`, and extract budget + tier (HARD/SOFT/FLEXIBLE), `maxLines`/`softWrap`/autosize,
-`width`/`weight`, container widget, and any config-qualified variants (localize for the
-tightest). Note Kotlin fragment-assembly (`a + count + b`) → flag for a parameterized resource
-instead of translating pieces. Check font coverage for the target script (Step A2) if it's CJK/KR/Thai/etc.
+For each in-scope key: open only the render site grep returns (Compose composable or
+`<TextView>`/layout), read ~20 lines around it, and note **function** (container/widget → Stage 2)
+and a **rough tier** (HARD/SOFT/FLEXIBLE). Note Kotlin/Java fragment-assembly (`a + count + b`)
+→ flag for a parameterized resource instead of translating pieces. **Don't compute exact budgets
+or run the overflow protocol here** — just flag tight HARD/SOFT sites (especially for long
+languages or scripts needing font fallback: CJK/KR/Thai/AR) so they can go to `/check-fit`.
 
 ## Step 4 — Translate by intent + validate
 
 Run **Stages 2–3** of the skill: classify each string, build the target-language profile once,
 translate with intent/scope/content fixed and register tuned to the voice card. Then run the
-hard checks — variables repositioned, plurals with the target's forms, length vs. budget ×
-expansion, glossary + polysemy, register, fidelity — and the BOTH-must-pass self-critique. For
-anything at risk of overflow, run the Overflow protocol (Step B shorten-form; register-weak or
-won't-fit → Step C escalate to the dev).
+hard checks — variables repositioned, plurals with the target's forms, glossary + polysemy,
+register, fidelity — and the BOTH-must-pass self-critique. **Translate faithfully even where it
+may overflow**; collect those keys into an overflow-risk list for `/check-fit` rather than
+shortening them here (fitting is the view layer's job).
 
 ## Step 5 — Prepare the file, preview, confirm, write
 
 Flow: **prepare → preview → confirm → write.** The **android-xml** rule governs the file
 mechanics (locale folder + BCP47 qualifier, escaping, positional args, plurals syntax,
-`translatable="false"`, CDATA, key order).
+`translatable="false"`, markup/CDATA preserved as the source has it, dev's structural comments
+kept and mirrored, key order).
 
 1. Generate the target `res/values-<qualifier>/strings.xml` (create the folder if missing). In partial scope, insert only the new keys without reordering existing entries.
 2. Show the dev a **diff** limited to the added/changed keys.
@@ -72,7 +77,7 @@ mechanics (locale folder + BCP47 qualifier, escaping, positional args, plurals s
 ## Step 6 — Report alongside the file (chat/PR, not in XML)
 
 - Decision notes: `key → choice + 1-line why`, only where non-obvious.
-- Layout & font-fallback warnings with shorter alternatives / recommended fixes.
+- **Overflow-risk list → run `/check-fit`** on it (don't shorten in this workflow).
 - Glossary table (for reuse).
 - Flags: ambiguous source, fragment assembly, non-plural-safe or bad source strings to fix in code (e.g. multi-arg strings using bare `%s` that must become positional `%1$s` **in the source** before any RTL/CJK locale is added).
 
@@ -84,11 +89,11 @@ Keep it terse; group flags for large batches.
 ```
 /localize-app → target language?
   1 scope: new/changed keys only, or full file? (git diff / list / missing in values-xx) — confirm if ambiguous
-  2 voice: detect from strings+Compose → confirm keep/shift → 🚦 lock
-  3 trace each key (grep) → read Compose: budget, tier, wrap, autosize, font coverage
+  2 voice: detect from strings + render sites → confirm keep/shift → 🚦 lock
+  3 trace each key (grep Compose R.string / View @string) → read render site: function + rough tier; flag tight spots
   4 classify → target-lang profile → translate (intent fixed, register to voice)
-     checks: vars ✓ plurals ✓ length ✓ glossary+polysemy ✓ register ✓ fidelity ✓
-     overflow? Step B shorten-form; weak/won't-fit → Step C escalate
-  5 prepare values-xx/strings.xml (rule: escape, positional args, plurals) → diff → 🚦 confirm → write
-  6 notes + warnings + glossary + flags → chat/PR, never into the XML
+     checks: vars ✓ plurals ✓ glossary+polysemy ✓ register ✓ fidelity ✓
+     overflow risk? collect into a list — DON'T shorten here
+  5 prepare values-xx/strings.xml (rule: escape, positional args, plurals, markup/comments) → diff → 🚦 confirm → write
+  6 notes + glossary + flags → chat/PR; overflow list → run /check-fit; never write notes into XML
 ```

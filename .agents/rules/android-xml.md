@@ -29,7 +29,7 @@ skill; this rule only guards the file mechanics.
 - Mark do-not-translate spans with `<xliff:g id="…">%1$s</xliff:g>` when the source uses it; otherwise keep `%1$s` as-is.
 
 ## Markup & plurals
-- Wrap real markup (`<b>`, `<u>`, anchor tags) in `<![CDATA[…]]>`.
+- **Preserve the source's markup form exactly — never add or remove `<![CDATA[…]]>`.** Android handles inline tags (`<b>`, `<u>`, `<a>`) two *incompatible* ways: bare tags are auto-parsed into styled spans, while CDATA makes them literal text the code must render itself (e.g. `Html.fromHtml`). The dev chose one on purpose; forcing CDATA onto a string that used bare tags (or stripping CDATA off one that relies on it) breaks rendering. Translate only the visible text and leave the tags **and their wrapping** byte-for-byte as the source has them.
 - Count-dependent text → `<plurals name="…">` with **exactly** the target language's required `quantity` items, not English's two forms:
   - ja / zh / ko / vi → `other` only
   - many Slavic (ru/pl/cs…) → `one / few / many / other`
@@ -37,5 +37,5 @@ skill; this rule only guards the file mechanics.
 - If the source string isn't plural-safe (a count spliced into a flat string), flag it for a `plurals` resource instead of translating the pieces.
 
 ## Never
-- No comments inside `strings.xml` — notes, warnings, and flags go to chat or the PR description, not the file (they pollute future diffs and translation passes).
+- Don't inject **translation-process notes** (decisions, warnings, flags) into `strings.xml` — those belong in chat or the PR description (they pollute future diffs and translation passes). But **keep the dev's own structural/section comments** (`<!-- Camera -->`, `<!-- Onboarding -->`): they organize a long file. Mirror them into each `values-<lang>/` file so the sections line up across locales.
 - No silent truncation and no invented abbreviations to make text fit. Surface an overflow as a layout decision instead.
