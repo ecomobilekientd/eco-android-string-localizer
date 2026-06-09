@@ -1,0 +1,10 @@
+# macOS
+.DS_Store
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+
+# Antigravity local agent state (keep .agents/ committed; ignore runtime artifacts)
+.antigravity/
