@@ -36,6 +36,7 @@ context rot:
 | [`.agents/skills/android-string-translator/SKILL.md`](.agents/skills/android-string-translator/SKILL.md) | Skill (agent-triggered) | the agent detects a localization task | The expertise — fidelity, voice card, reading Compose **or View/XML** for context, classification, glossary. Translates + flags; defers fit. |
 | [`.agents/workflows/localize-app.md`](.agents/workflows/localize-app.md) | Workflow (`/localize-app`) | the dev types `/localize-app` | The ordered translate procedure with confirm-gates and the git/grep commands. |
 | [`.agents/workflows/check-fit.md`](.agents/workflows/check-fit.md) | Workflow (`/check-fit`) | the dev types `/check-fit` (or `/localize-app` flags tight strings) | The overflow & layout-fit protocol for Compose + View/XML — budget, font fallback, view-layer fixes; shortening only as a dev-approved last resort. |
+| [`.agents/workflows/clean-strings.md`](.agents/workflows/clean-strings.md) | Workflow (`/clean-strings`) | the dev types `/clean-strings` ("find unused strings", "dọn string") | Audit + safe removal of dead string resources. Shell-driven scan of every reference surface → classify 🟢/🟡/⛔ → dev confirms → delete across all locales → build/lint verify (auto-revert on red). |
 
 ## Install
 
